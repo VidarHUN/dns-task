@@ -1,0 +1,11 @@
+.:100 {
+    forward . 8.8.8.8 9.9.9.9
+    log
+    errors
+}
+
+example.com:100 {
+    file /root/example.db
+    log
+    errors
+}
