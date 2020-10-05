@@ -7,11 +7,11 @@ metadata:
 spec:
   storageClassName: manual
   capacity:
-    storage: 2Gi
+    storage: 10Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/home/docker/config"
+    path: "/mnt/data/config"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -23,7 +23,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 2Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -44,10 +44,10 @@ spec:
       containers:
         - name: dns
           image: coredns/coredns
-          args: ["-conf", "Corefile"]
+          args: ["-conf", "/root/Corefile"]
           volumeMounts:
             - name: dns-config
-              mountPath: /root
+              mountPath: "/root"
           ports:
             - containerPort: 100
               protocol: UDP
