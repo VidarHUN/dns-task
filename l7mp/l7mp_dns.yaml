@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: config-pv
+  labels: 
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/config"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: config-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns
+  labels:
+    app: dns
+spec:
+  clusterIP: None
+  selector:
+    app: dns
+  ports:
+    - protocol: UDP
+      port: 100
+      targetPort: 100
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dns
+  labels:
+    app: dns
+spec:
+  serviceName: dns
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dns
+  template:
+    metadata:
+      labels:
+        app: dns
+    spec:
+      containers:
+      - name: dns
+        image: coredns/coredns
+        args: ["-conf", "/root/Corefile"]
+        volumeMounts:
+            - name: dns-config
+              mountPath: "/root"
+      volumes:
+        - name: dns-config
+          persistentVolumeClaim:
+            claimName: config-pvc
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: l7mp-ingress-gw
+  labels:
+    app: l7mp-ingress-gw
+spec:
+  selector:
+    matchLabels:
+      app: l7mp-ingress-gw
+  template:
+    metadata:
+      labels:
+        app: l7mp-ingress-gw
+    spec:
+      volumes:
+        - name: l7mp-ingress-gw-config
+          configMap:
+            name: l7mp-ingress-gw
+      containers: 
+      - name: l7mp
+        image: l7mp/l7mp:latest
+        imagePullPolicy: IfNotPresent
+        command: [ "node" ]
+        args: [ "l7mp-proxy.js", "-c", "config/l7mp-ingress-gw.yaml", "-s", "-l", "silly"]
+        ports:
+          - containerPort: 5000
+            protocol: UDP
+        volumeMounts:
+          - name: l7mp-ingress-gw-config
+            mountPath: /app/config
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: l7mp-ingress-gw
+data:
+  l7mp-ingress-gw.yaml: |
+    admin:
+      log_level: info
+      log_file: stdout
+      access_log_path: /tmp/admin_access.log
+    listeners:
+      - name: udp-listener
+        spec: {protocol: UDP, port: 5000}
+        rules:
+          - name: rule-0
+            match: {op: starts, path: /IP/src_addr, value: 172.17.0.1 }
+            action:
+              route:
+                destination: coredns
+                retry: 
+                  retry_on: always
+                  num_retries: 3
+                  timeout: 2000
+      - name: controller-listener
+        spec: { protocol: HTTP, port: 1234 }
+        rules:
+          - action:
+              route:
+                destination:
+                  name: l7mp-controller
+                  spec: { protocol: L7mpController }
+    clusters:
+      - name: coredns
+        spec: { protocol: UDP, port: 100 }
+        endpoints:
+          - name: ep0
+            spec: { address: dns-0.dns, port: 100 }
+          - name: ep1
+            spec: { address: dns-1.dns, port: 100 }
