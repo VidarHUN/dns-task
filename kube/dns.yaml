@@ -55,35 +55,7 @@ spec:
         - name: dns-config
           persistentVolumeClaim:
             claimName: config-pvc
-    #  volumes:
-    #    - name: dns-config
-    #      configMap:
-    #         name: dns-config
 ---
-#apiVersion: v1
-#kind: ConfigMap
-#metaData:
-#  name: dns-config
-#data:
-#  Corefile: | -
-#    .:100 {
-#      forward . 8.8.8.8 9.9.9.9
-#      log
-#      errors
-#    }
-#    
-#    example.com:100 {
-#      file /root/example.db
-#      log
-#      errors
-#    }
-#  example.db: | -
-#    example.com.        IN  SOA dns.example.com. robbmanes.example.com. 2015082541 7200 3600 1209600 3600
-#    gateway.example.com.    IN  A   192.168.1.1
-#    dns.example.com.    IN  A   192.168.1.2
-#    host.example.com.   IN  A   192.168.1.3
-#    server.example.com. IN  CNAME   host.example.com
-#---
 apiVersion: v1
 kind: Service
 metadata:
@@ -94,5 +66,6 @@ spec:
   ports:
     - protocol: UDP
       port: 31000
+      nodePort: 31000
       targetPort: 100
   type: NodePort
