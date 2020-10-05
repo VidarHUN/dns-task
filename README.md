@@ -2,7 +2,7 @@
 
 In this task you will be able to deploy a CoreDNS DNS server in a Kubernetes cluster and use resilience and request control through l7mp. 
 
-For sake of simplicity the DNS server provide a simple `A` record, which is look like this in the config:
+For the sake of simplicity the DNS server provides a simple `A` record, which is looks like this in the config:
 
 ```
 host.example.com.   IN  A   192.168.1.3
@@ -14,20 +14,20 @@ The Domain Name System ([DNS](https://www.cloudflare.com/learning/dns/what-is-dn
 
 ## Before you begin 
 
-1. You must have a Minikube or some kind of Kubernetes cluster
-2. Basic knowledge about DNS and CoreDNS
+1. You must have a Minikube or some kind of Kubernetes cluster.
+2. Basic knowledge about DNS and CoreDNS.
 
 ## How to deploy
 
-1. Create the necessary files in Minikube or your environment like that way
+1. Create the necessary files in Minikube or your environment like that way:
 
-   1. You have to ssh into Minikube `minikube ssh`
+   1. You have to ssh into Minikube `minikube ssh`.
 
-   2. Install a simple text editor: `sudo apt update && sudo apt install nano`
+   2. Install a simple text editor: `sudo apt update && sudo apt install nano`.
 
-   3. Then you have to create folder: `sudo mkdir /mnt/data/config`
+   3. Then you have to create a folder: `sudo mkdir /mnt/data/config`.
 
-   4. And finally put these file into the `config` folder:
+   4. And finally, put these files into the `config` folder:
 
       1. The `Corefile`: 
 
@@ -55,9 +55,9 @@ The Domain Name System ([DNS](https://www.cloudflare.com/learning/dns/what-is-dn
          server.example.com. IN  CNAME   host.example.com
          ```
 
-   5. Exit from Minikube
+   5. Exit from Minikube.
 
-2. When the files are exist you, have to create a `persistentVolume` and a `persistentVolumeClaim`: 
+2. When the files are existing you, have to create a `persistentVolume` and a `persistentVolumeClaim`: 
 
    ```yml
    cat <<EOF | kubectl apply -f -
@@ -90,7 +90,7 @@ The Domain Name System ([DNS](https://www.cloudflare.com/learning/dns/what-is-dn
    EOF
    ```
 
-   This will mount the the `/mnt/data/config` folder to the cluster. 
+   This will mount the `/mnt/data/config` folder to the cluster. 
 
    You should see one after that:
 
@@ -106,7 +106,7 @@ The Domain Name System ([DNS](https://www.cloudflare.com/learning/dns/what-is-dn
    config-pvc   Bound    config-pv   10Gi       RWO            manual         4h55m
    ```
 
-   That means the `pv` and the `pvc` are bounded and usable. 
+   That means the `pv` and the `pvc` is bounded and usable. 
 
 3. Deploy the `Statefulsets` with `headless service`: 
 
@@ -250,7 +250,7 @@ The Domain Name System ([DNS](https://www.cloudflare.com/learning/dns/what-is-dn
 
 ## Test
 
-First you have to make sure the service is working, so with the `dig` tool you can receive data about a domain name. 
+First, you have to make sure the service is working, so with the `dig` tool you can receive data about a domain name. 
 
 Try this in your terminal: `dig @$(minikube ip) -p 5000 host.example.com` and the output should look like this: 
 
@@ -282,9 +282,9 @@ As you can see you got back the `IP` of the requested `Domain name`.
 
 ### Resilience 
 
-The resilience means: the quality of being able to return quickly to a previous good condition after problems. So in that case, what if you are delete a pod with the following script while an active name resolution? 
+The resilience means: the quality of being able to return quickly to a previous good condition after problems. So in that case, what if you are deleting a pod with the following script while an active name resolution? 
 
-Write that script on your local machine and name it something like `pod-del.sh`: 
+Write that script on your local machine and names it something like `pod-del.sh`: 
 
 ```bash
 #!/bin/bash                                                                                                                               
@@ -297,22 +297,22 @@ kubectl delete pod $POD
 curl -sX DELETE http://$(minikube ip):1234/api/v1/endpoints/${ENDPOINT}'?recursive=true'
 ```
 
-Make it runnable if it is not in default: `sudo chmod u+x pod-del.sh`
+Make it runnable if it is not in default: `sudo chmod u+x pod-del.sh`.
 
 So you are able to delete a pod in the cluster and from the l7mp. 
 
-1. For the test case, you have to open a terminal and make continuous name resolution to the DNS server: `watch -n 1 dig @$(minikube ip) -p 5000 host.example.host`
-2. Now use the deletion script: `./pod-del.sh dns-0 ep0`
+1. In the test case, you have to open a terminal and make continuous name resolution to the DNS server: `watch -n 1 dig @$(minikube ip) -p 5000 host.example.host`.
+2. Now use the deletion script: `./pod-del.sh dns-0 ep0`.
 
-As you can see, the name resolution did not stopped and works as before the deletion. 
+As you can see, the name resolution did not stop and works as before the deletion. 
 
 ### Request routing 
 
-That means you can restricts the traffic to the DNS server with `l7mp`. 
+That means you can restrict the traffic to the DNS server with `l7mp`. 
 
-If you set the `Docker bridge gateway IP` correctly than you cannot make name resolution from different IP. So test it out. 
+If you set the `Docker bridge gateway IP` correctly, then you cannot make name resolution from different IPs. So test it out. 
 
-You can specify the source IP for`dig` with the `-b` switch, but you have to give a real IP. For example your `eth0` interface's IP will be good. 
+You can specify the source IP for `dig` with the `-b` switch, but you have to give a real IP. For example, your `eth0` interface's IP will be good. 
 
 If you give out that command `dig @$(minikube ip) -p 5000 -b 10.0.2.15 host.example.com` this have to give you an error message. 
 
