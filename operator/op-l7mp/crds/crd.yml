@@ -1,0 +1,2649 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata: {name: virtualservices.l7mp.io}
+spec:
+  group: l7mp.io
+  names:
+    kind: VirtualService
+    plural: virtualservices
+    shortNames: [vsvc]
+    singular: virtualservice
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - {description: Selector, jsonPath: .spec.selector, name: Selector, priority: 0, type: string}
+    - {description: As returned from the handler (sometimes)., jsonPath: .status.create_fn.message, name: Message, priority: 0, type: string}
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              listener:
+                description: 'A socket that listens for incoming connection requests, an abstraction for an "ingress port".
+
+                  '
+                oneOf:
+                - not:
+                    required: [rulesRef]
+                  required: [spec, rules]
+                - not:
+                    required: [rules]
+                  required: [spec, rulesRef]
+                properties:
+                  name: {description: Name (required)., type: string}
+                  options:
+                    description: Optional features.
+                    properties:
+                      track: {description: 'Sessions created by this listener will be tracked and will be available after ending for a specified amount of time, to help post-mortem analysis. If specified, then value must be an integer, providing the number of seconds during which the session will be available before deletion.
+
+                          ', type: integer}
+                    type: object
+                  rules:
+                    description: 'An inline list of match-action rules.
+
+                      '
+                    items:
+                      description: 'A math-action rule that defines the route of a connection through the L7mp pipeline. May contain a match and an action. If no match is specified, a wildcard match is automatically installed.
+
+                        '
+                      properties:
+                        action:
+                          description: 'The "action" part of a math-action rule that assigns a route to the matched sessions.
+
+                            '
+                          oneOf:
+                          - not:
+                              required: [route]
+                            required: [routeRef]
+                          - not:
+                              required: [routeRef]
+                            required: [route]
+                          - allOf:
+                            - not:
+                                required: [route]
+                            - not:
+                                required: [routeRef]
+                          properties:
+                            apply: {description: A named RuleList to defer match-action processing to., type: string}
+                            rewrite:
+                              description: A list of rewrite rules.
+                              items:
+                                description: 'Metadata rewrite rule. Find or create metadata at the specified path and set it to the specified value.
+
+                                  '
+                                oneOf:
+                                - not:
+                                    required: [valueStr]
+                                  required: [path, value]
+                                - not:
+                                    required: [value]
+                                  required: [path, valueStr]
+                                properties:
+                                  path: {description: 'The JSON path (as a JSON Pointer) to the metadata field to rewrite. Will be created if path does not exist.
+
+                                      ', type: string}
+                                  value: {description: 'The value to rewrite the metadata field at the specified path.
+
+                                      ', type: object, x-kubernetes-preserve-unknown-fields: true}
+                                  valueStr: {description: 'JSON encoded value to rewrite the metadata field at the specified path.
+
+                                      ', type: string}
+                                type: object
+                              type: array
+                            route:
+                              description: The route to be assigned to a session in a math-action rule.
+                              oneOf:
+                              - not:
+                                  required: [destination]
+                                required: [destinationRef]
+                              - not:
+                                  required: [destinationRef]
+                                required: [destination]
+                              properties:
+                                destination:
+                                  description: 'A socket that originates connections to external services, an abstraction for an "egress port".
+
+                                    '
+                                  oneOf:
+                                  - not:
+                                      required: [endpoints]
+                                    required: [spec, endpointNum]
+                                  - not:
+                                      required: [endpointNum]
+                                    required: [spec, endpoints]
+                                  - allOf:
+                                    - not:
+                                        required: [endpointNum]
+                                    - not:
+                                        required: [endpoints]
+                                    required: [spec]
+                                  properties:
+                                    endpointNum: {description: 'The number of endpoints.  (Sometimes used in return values.)
+
+                                        ', type: integer}
+                                    endpoints:
+                                      description: A list of EndPoints.
+                                      items:
+                                        anyOf:
+                                        - required: [spec]
+                                        - required: [selector]
+                                        description: 'A particular upstream backend that accepts connects through a Cluster.
+
+                                          '
+                                        properties:
+                                          name: {description: 'Name (optional, a unique endpoint name will be assigned automatically if not specified.)
+
+                                              ', type: string}
+                                          selector:
+                                            properties:
+                                              matchExpressions:
+                                                description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                                                  '
+                                                properties:
+                                                  key: {description: key is the label key that the selector applies to., type: string}
+                                                  operator:
+                                                    description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                                                      '
+                                                    enum: [In, NotIn, Exists, DoesNotexist]
+                                                    type: string
+                                                  values:
+                                                    description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                                                      '
+                                                    items: {type: string}
+                                                    type: array
+                                                type: object
+                                              matchFields:
+                                                description: 'A list of node selector requirements by node''s fields.
+
+                                                  '
+                                                properties:
+                                                  key: {description: 'The label key that the selector applies to
+
+                                                      ', type: string}
+                                                  operator:
+                                                    description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                                                      '
+                                                    enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                                                    type: string
+                                                  values:
+                                                    description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                                                      '
+                                                    items: {type: string}
+                                                    type: array
+                                                type: object
+                                              matchLabels:
+                                                additionalProperties: {type: string}
+                                                description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                                                  '
+                                                type: object
+                                                x-kubernetes-preserve-unknown-fields: true
+                                              matchNamespace: {description: matches pods with the given namespace, type: string}
+                                              matchService: {description: matches pods belonging to the given service, type: string}
+                                            type: object
+                                          spec:
+                                            description: A generic endpoint specification.
+                                            oneOf:
+                                            - not:
+                                                required: [address]
+                                              required: [filename]
+                                            - not:
+                                                required: [filename]
+                                              required: [address]
+                                            properties:
+                                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                              filename: {description: Unix Domain Socket filename, type: string}
+                                              weight: {description: Weight of the endpoint used in load-balancing., type: integer}
+                                            type: object
+                                        type: object
+                                      type: array
+                                    loadbalancer:
+                                      description: Load-balancer specification.
+                                      properties:
+                                        key: {description: 'The JSON path to the metadata field to hash on (optional).
+
+                                            ', type: string}
+                                        policy: {description: 'Load-balancing policy. The "Trivial" load-balancer always chooses the first endpoint. The "ConsistentHash" (alias for "HashRing") chooses an endpoint based on hashing the "LoadBalancer.key" field (or randomly if no key is specified). It provides soft session affinity (map sessions to the same endpoint with high probability even when adding/removing endpoints) and takes endpoint weights into account (so "HashRing" with no key specified will implement a somewhat expensive form of weighted random load-balancing).
+
+                                            ', type: string}
+                                      required: [policy]
+                                      type: object
+                                    name: {type: string}
+                                    options: {description: Optional features., type: object}
+                                    spec:
+                                      maxProperties: 1
+                                      minProperties: 1
+                                      properties:
+                                        Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                        Echo: {description: A virtual cluster that echoes back everything it receives., maxProperties: 0, type: object}
+                                        JSONDecap: {description: 'A virtual cluster to decapsulates data from JSON. In particular, content from under "/payload" JSON path is decapsulated and returned and everything else is dropped.
+
+                                            ', maxProperties: 0, type: object}
+                                        JSONEncap: {description: 'A virtual cluster to encapsulate data in JSON. Session metadata is copied under the "/metadata" JSON path and content is copied under "/payload".
+
+                                            ', maxProperties: 0, type: object}
+                                        JSONSocket:
+                                          description: 'A JSONSocket cluster specification that forwards JSONSocket connections to an upstream cluster over a specified transport.
+
+                                            '
+                                          properties:
+                                            header:
+                                              items:
+                                                properties:
+                                                  path:
+                                                    description: 'Deepcopy the session metadata into the JSONSocket header under the specified path.
+
+                                                      '
+                                                    properties:
+                                                      from: {description: 'JSONPointer to the key to be deepcopied from the metadata into the JSONSocket header.
+
+                                                          ', type: string}
+                                                      to: {description: 'Target path as a JSONPointer where the specified values are copied to.
+
+                                                          ', type: string}
+                                                    required: [from, to]
+                                                    type: object
+                                                  set:
+                                                    description: "Set a key in the JSONSocket header to the specified constant value. \n"
+                                                    properties:
+                                                      key: {description: JSONPointer to the key in the JSONSocket header., type: string}
+                                                      value: {description: Value to be set for the specified key., type: string}
+                                                    required: [key, value]
+                                                    type: object
+                                                type: object
+                                              type: array
+                                            transport:
+                                              description: 'The specification of the cluster that provides the transport service to JSONSocket.
+
+                                                '
+                                              maxProperties: 1
+                                              minProperties: 1
+                                              properties:
+                                                Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                                Stdio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                                    ', maxProperties: 0, type: object}
+                                                TCP:
+                                                  description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                                    '
+                                                  properties:
+                                                    bind:
+                                                      description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                        '
+                                                      properties:
+                                                        address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                        port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                      type: object
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                                UDP:
+                                                  description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                                    '
+                                                  properties:
+                                                    bind:
+                                                      description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                        '
+                                                      properties:
+                                                        address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                        port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                      type: object
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                                UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                                    ', maxProperties: 0, type: object}
+                                                WebSocket:
+                                                  description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                                    '
+                                                  properties:
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                              type: object
+                                          required: [transport]
+                                          type: object
+                                        L7mpController: {description: 'A virtual cluster that accepts L7mp controller REST API calls.
+
+                                            ', maxProperties: 0, type: object}
+                                        Logger:
+                                          description: 'A virtual cluster that logs everything that passes through it to a log file.
+
+                                            '
+                                          properties:
+                                            log_file: {description: 'The file to log to. Opened it mode "w" (create or truncate if exists). Default is ''-'' (stdout).
+
+                                                ', type: string}
+                                            log_prefix: {description: Prefix log messages. Default is no prefix., type: string}
+                                          type: object
+                                        Sdtio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                            ', maxProperties: 0, type: object}
+                                        Sync:
+                                          description: 'A virtual cluster that allows multiple streams to synchronize and exchange data. The Sync cluster acts as a rendezvous point for streams whose metadata query evaluates to the same value (like e.g., multiple WebSocket streams with the same HTTP cookie); these streams will be connected into a single broadcast domain, whereby any data sent by any of the streams will be boradcast to all the other streams. Useful for connecting two ingress streams into a single end-to-end stream.
+
+                                            '
+                                          properties:
+                                            query: {description: 'A JSONPredicate query to the stream metadata. All streams for which the query evaluates to the same value will be connected into a single broadcast domain.
+
+                                                ', type: string}
+                                          required: [query]
+                                          type: object
+                                        TCP:
+                                          description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                            '
+                                          properties:
+                                            bind:
+                                              description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                '
+                                              properties:
+                                                address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                              type: object
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                        UDP:
+                                          description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                            '
+                                          properties:
+                                            bind:
+                                              description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                '
+                                              properties:
+                                                address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                              type: object
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                        UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                            ', maxProperties: 0, type: object}
+                                        WebSocket:
+                                          description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                            '
+                                          properties:
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                      type: object
+                                  type: object
+                                destinationRef: {description: 'The target cluster of the route. It is the name of an existing cluster.
+
+                                    ', type: string}
+                                egress:
+                                  description: 'The set of transforms to be applied in the "eress" (downstream, from the cluster to the listener) direction (optional).
+
+                                    '
+                                  items:
+                                    description: 'A downlink transformer cluster. Can be a string in which case it is the name of an existing cluster with the name given, or it can be an inline cluster definition in which case a new cluster will be added.
+
+                                      '
+                                    oneOf:
+                                    - not:
+                                        required: [cluster]
+                                      required: [clusterRef]
+                                    - not:
+                                        required: [clusterRef]
+                                      required: [cluster]
+                                    properties:
+                                      cluster:
+                                        description: 'A socket that originates connections to external services, an abstraction for an "egress port".
+
+                                          '
+                                        oneOf:
+                                        - not:
+                                            required: [endpoints]
+                                          required: [spec, endpointNum]
+                                        - not:
+                                            required: [endpointNum]
+                                          required: [spec, endpoints]
+                                        - allOf:
+                                          - not:
+                                              required: [endpointNum]
+                                          - not:
+                                              required: [endpoints]
+                                          required: [spec]
+                                        properties:
+                                          endpointNum: {description: 'The number of endpoints.  (Sometimes used in return values.)
+
+                                              ', type: integer}
+                                          endpoints:
+                                            description: A list of EndPoints.
+                                            items:
+                                              anyOf:
+                                              - required: [spec]
+                                              - required: [selector]
+                                              description: 'A particular upstream backend that accepts connects through a Cluster.
+
+                                                '
+                                              properties:
+                                                name: {description: 'Name (optional, a unique endpoint name will be assigned automatically if not specified.)
+
+                                                    ', type: string}
+                                                selector:
+                                                  properties:
+                                                    matchExpressions:
+                                                      description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                                                        '
+                                                      properties:
+                                                        key: {description: key is the label key that the selector applies to., type: string}
+                                                        operator:
+                                                          description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                                                            '
+                                                          enum: [In, NotIn, Exists, DoesNotexist]
+                                                          type: string
+                                                        values:
+                                                          description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                                                            '
+                                                          items: {type: string}
+                                                          type: array
+                                                      type: object
+                                                    matchFields:
+                                                      description: 'A list of node selector requirements by node''s fields.
+
+                                                        '
+                                                      properties:
+                                                        key: {description: 'The label key that the selector applies to
+
+                                                            ', type: string}
+                                                        operator:
+                                                          description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                                                            '
+                                                          enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                                                          type: string
+                                                        values:
+                                                          description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                                                            '
+                                                          items: {type: string}
+                                                          type: array
+                                                      type: object
+                                                    matchLabels:
+                                                      additionalProperties: {type: string}
+                                                      description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                                                        '
+                                                      type: object
+                                                      x-kubernetes-preserve-unknown-fields: true
+                                                    matchNamespace: {description: matches pods with the given namespace, type: string}
+                                                    matchService: {description: matches pods belonging to the given service, type: string}
+                                                  type: object
+                                                spec:
+                                                  description: A generic endpoint specification.
+                                                  oneOf:
+                                                  - not:
+                                                      required: [address]
+                                                    required: [filename]
+                                                  - not:
+                                                      required: [filename]
+                                                    required: [address]
+                                                  properties:
+                                                    address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                    filename: {description: Unix Domain Socket filename, type: string}
+                                                    weight: {description: Weight of the endpoint used in load-balancing., type: integer}
+                                                  type: object
+                                              type: object
+                                            type: array
+                                          loadbalancer:
+                                            description: Load-balancer specification.
+                                            properties:
+                                              key: {description: 'The JSON path to the metadata field to hash on (optional).
+
+                                                  ', type: string}
+                                              policy: {description: 'Load-balancing policy. The "Trivial" load-balancer always chooses the first endpoint. The "ConsistentHash" (alias for "HashRing") chooses an endpoint based on hashing the "LoadBalancer.key" field (or randomly if no key is specified). It provides soft session affinity (map sessions to the same endpoint with high probability even when adding/removing endpoints) and takes endpoint weights into account (so "HashRing" with no key specified will implement a somewhat expensive form of weighted random load-balancing).
+
+                                                  ', type: string}
+                                            required: [policy]
+                                            type: object
+                                          name: {type: string}
+                                          options: {description: Optional features., type: object}
+                                          spec:
+                                            maxProperties: 1
+                                            minProperties: 1
+                                            properties:
+                                              Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                              Echo: {description: A virtual cluster that echoes back everything it receives., maxProperties: 0, type: object}
+                                              JSONDecap: {description: 'A virtual cluster to decapsulates data from JSON. In particular, content from under "/payload" JSON path is decapsulated and returned and everything else is dropped.
+
+                                                  ', maxProperties: 0, type: object}
+                                              JSONEncap: {description: 'A virtual cluster to encapsulate data in JSON. Session metadata is copied under the "/metadata" JSON path and content is copied under "/payload".
+
+                                                  ', maxProperties: 0, type: object}
+                                              JSONSocket:
+                                                description: 'A JSONSocket cluster specification that forwards JSONSocket connections to an upstream cluster over a specified transport.
+
+                                                  '
+                                                properties:
+                                                  header:
+                                                    items:
+                                                      properties:
+                                                        path:
+                                                          description: 'Deepcopy the session metadata into the JSONSocket header under the specified path.
+
+                                                            '
+                                                          properties:
+                                                            from: {description: 'JSONPointer to the key to be deepcopied from the metadata into the JSONSocket header.
+
+                                                                ', type: string}
+                                                            to: {description: 'Target path as a JSONPointer where the specified values are copied to.
+
+                                                                ', type: string}
+                                                          required: [from, to]
+                                                          type: object
+                                                        set:
+                                                          description: "Set a key in the JSONSocket header to the specified constant value. \n"
+                                                          properties:
+                                                            key: {description: JSONPointer to the key in the JSONSocket header., type: string}
+                                                            value: {description: Value to be set for the specified key., type: string}
+                                                          required: [key, value]
+                                                          type: object
+                                                      type: object
+                                                    type: array
+                                                  transport:
+                                                    description: 'The specification of the cluster that provides the transport service to JSONSocket.
+
+                                                      '
+                                                    maxProperties: 1
+                                                    minProperties: 1
+                                                    properties:
+                                                      Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                                      Stdio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                                          ', maxProperties: 0, type: object}
+                                                      TCP:
+                                                        description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                                          '
+                                                        properties:
+                                                          bind:
+                                                            description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                              '
+                                                            properties:
+                                                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                            type: object
+                                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                        required: [port]
+                                                        type: object
+                                                      UDP:
+                                                        description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                                          '
+                                                        properties:
+                                                          bind:
+                                                            description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                              '
+                                                            properties:
+                                                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                            type: object
+                                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                        required: [port]
+                                                        type: object
+                                                      UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                                          ', maxProperties: 0, type: object}
+                                                      WebSocket:
+                                                        description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                                          '
+                                                        properties:
+                                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                        required: [port]
+                                                        type: object
+                                                    type: object
+                                                required: [transport]
+                                                type: object
+                                              L7mpController: {description: 'A virtual cluster that accepts L7mp controller REST API calls.
+
+                                                  ', maxProperties: 0, type: object}
+                                              Logger:
+                                                description: 'A virtual cluster that logs everything that passes through it to a log file.
+
+                                                  '
+                                                properties:
+                                                  log_file: {description: 'The file to log to. Opened it mode "w" (create or truncate if exists). Default is ''-'' (stdout).
+
+                                                      ', type: string}
+                                                  log_prefix: {description: Prefix log messages. Default is no prefix., type: string}
+                                                type: object
+                                              Sdtio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                                  ', maxProperties: 0, type: object}
+                                              Sync:
+                                                description: 'A virtual cluster that allows multiple streams to synchronize and exchange data. The Sync cluster acts as a rendezvous point for streams whose metadata query evaluates to the same value (like e.g., multiple WebSocket streams with the same HTTP cookie); these streams will be connected into a single broadcast domain, whereby any data sent by any of the streams will be boradcast to all the other streams. Useful for connecting two ingress streams into a single end-to-end stream.
+
+                                                  '
+                                                properties:
+                                                  query: {description: 'A JSONPredicate query to the stream metadata. All streams for which the query evaluates to the same value will be connected into a single broadcast domain.
+
+                                                      ', type: string}
+                                                required: [query]
+                                                type: object
+                                              TCP:
+                                                description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                                  '
+                                                properties:
+                                                  bind:
+                                                    description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                      '
+                                                    properties:
+                                                      address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                    type: object
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                required: [port]
+                                                type: object
+                                              UDP:
+                                                description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                                  '
+                                                properties:
+                                                  bind:
+                                                    description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                      '
+                                                    properties:
+                                                      address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                    type: object
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                required: [port]
+                                                type: object
+                                              UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                                  ', maxProperties: 0, type: object}
+                                              WebSocket:
+                                                description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                                  '
+                                                properties:
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                required: [port]
+                                                type: object
+                                            type: object
+                                        type: object
+                                      clusterRef: {type: string}
+                                    type: object
+                                  type: array
+                                ingress:
+                                  description: 'The set of transforms to be applied in the "ingress" (upstream, from the listener to the cluster) direction (optional).
+
+                                    '
+                                  items:
+                                    description: 'An uplink transformer cluster. Can be a string in which case it is the name of an existing cluster with the name given, or it can be an inline cluster definition in which case a new cluster will be added.
+
+                                      '
+                                    oneOf:
+                                    - not:
+                                        required: [cluster]
+                                      required: [clusterRef]
+                                    - not:
+                                        required: [clusterRef]
+                                      required: [cluster]
+                                    properties:
+                                      cluster:
+                                        description: 'A socket that originates connections to external services, an abstraction for an "egress port".
+
+                                          '
+                                        oneOf:
+                                        - not:
+                                            required: [endpoints]
+                                          required: [spec, endpointNum]
+                                        - not:
+                                            required: [endpointNum]
+                                          required: [spec, endpoints]
+                                        - allOf:
+                                          - not:
+                                              required: [endpointNum]
+                                          - not:
+                                              required: [endpoints]
+                                          required: [spec]
+                                        properties:
+                                          endpointNum: {description: 'The number of endpoints.  (Sometimes used in return values.)
+
+                                              ', type: integer}
+                                          endpoints:
+                                            description: A list of EndPoints.
+                                            items:
+                                              anyOf:
+                                              - required: [spec]
+                                              - required: [selector]
+                                              description: 'A particular upstream backend that accepts connects through a Cluster.
+
+                                                '
+                                              properties:
+                                                name: {description: 'Name (optional, a unique endpoint name will be assigned automatically if not specified.)
+
+                                                    ', type: string}
+                                                selector:
+                                                  properties:
+                                                    matchExpressions:
+                                                      description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                                                        '
+                                                      properties:
+                                                        key: {description: key is the label key that the selector applies to., type: string}
+                                                        operator:
+                                                          description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                                                            '
+                                                          enum: [In, NotIn, Exists, DoesNotexist]
+                                                          type: string
+                                                        values:
+                                                          description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                                                            '
+                                                          items: {type: string}
+                                                          type: array
+                                                      type: object
+                                                    matchFields:
+                                                      description: 'A list of node selector requirements by node''s fields.
+
+                                                        '
+                                                      properties:
+                                                        key: {description: 'The label key that the selector applies to
+
+                                                            ', type: string}
+                                                        operator:
+                                                          description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                                                            '
+                                                          enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                                                          type: string
+                                                        values:
+                                                          description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                                                            '
+                                                          items: {type: string}
+                                                          type: array
+                                                      type: object
+                                                    matchLabels:
+                                                      additionalProperties: {type: string}
+                                                      description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                                                        '
+                                                      type: object
+                                                      x-kubernetes-preserve-unknown-fields: true
+                                                    matchNamespace: {description: matches pods with the given namespace, type: string}
+                                                    matchService: {description: matches pods belonging to the given service, type: string}
+                                                  type: object
+                                                spec:
+                                                  description: A generic endpoint specification.
+                                                  oneOf:
+                                                  - not:
+                                                      required: [address]
+                                                    required: [filename]
+                                                  - not:
+                                                      required: [filename]
+                                                    required: [address]
+                                                  properties:
+                                                    address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                    filename: {description: Unix Domain Socket filename, type: string}
+                                                    weight: {description: Weight of the endpoint used in load-balancing., type: integer}
+                                                  type: object
+                                              type: object
+                                            type: array
+                                          loadbalancer:
+                                            description: Load-balancer specification.
+                                            properties:
+                                              key: {description: 'The JSON path to the metadata field to hash on (optional).
+
+                                                  ', type: string}
+                                              policy: {description: 'Load-balancing policy. The "Trivial" load-balancer always chooses the first endpoint. The "ConsistentHash" (alias for "HashRing") chooses an endpoint based on hashing the "LoadBalancer.key" field (or randomly if no key is specified). It provides soft session affinity (map sessions to the same endpoint with high probability even when adding/removing endpoints) and takes endpoint weights into account (so "HashRing" with no key specified will implement a somewhat expensive form of weighted random load-balancing).
+
+                                                  ', type: string}
+                                            required: [policy]
+                                            type: object
+                                          name: {type: string}
+                                          options: {description: Optional features., type: object}
+                                          spec:
+                                            maxProperties: 1
+                                            minProperties: 1
+                                            properties:
+                                              Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                              Echo: {description: A virtual cluster that echoes back everything it receives., maxProperties: 0, type: object}
+                                              JSONDecap: {description: 'A virtual cluster to decapsulates data from JSON. In particular, content from under "/payload" JSON path is decapsulated and returned and everything else is dropped.
+
+                                                  ', maxProperties: 0, type: object}
+                                              JSONEncap: {description: 'A virtual cluster to encapsulate data in JSON. Session metadata is copied under the "/metadata" JSON path and content is copied under "/payload".
+
+                                                  ', maxProperties: 0, type: object}
+                                              JSONSocket:
+                                                description: 'A JSONSocket cluster specification that forwards JSONSocket connections to an upstream cluster over a specified transport.
+
+                                                  '
+                                                properties:
+                                                  header:
+                                                    items:
+                                                      properties:
+                                                        path:
+                                                          description: 'Deepcopy the session metadata into the JSONSocket header under the specified path.
+
+                                                            '
+                                                          properties:
+                                                            from: {description: 'JSONPointer to the key to be deepcopied from the metadata into the JSONSocket header.
+
+                                                                ', type: string}
+                                                            to: {description: 'Target path as a JSONPointer where the specified values are copied to.
+
+                                                                ', type: string}
+                                                          required: [from, to]
+                                                          type: object
+                                                        set:
+                                                          description: "Set a key in the JSONSocket header to the specified constant value. \n"
+                                                          properties:
+                                                            key: {description: JSONPointer to the key in the JSONSocket header., type: string}
+                                                            value: {description: Value to be set for the specified key., type: string}
+                                                          required: [key, value]
+                                                          type: object
+                                                      type: object
+                                                    type: array
+                                                  transport:
+                                                    description: 'The specification of the cluster that provides the transport service to JSONSocket.
+
+                                                      '
+                                                    maxProperties: 1
+                                                    minProperties: 1
+                                                    properties:
+                                                      Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                                      Stdio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                                          ', maxProperties: 0, type: object}
+                                                      TCP:
+                                                        description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                                          '
+                                                        properties:
+                                                          bind:
+                                                            description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                              '
+                                                            properties:
+                                                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                            type: object
+                                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                        required: [port]
+                                                        type: object
+                                                      UDP:
+                                                        description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                                          '
+                                                        properties:
+                                                          bind:
+                                                            description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                              '
+                                                            properties:
+                                                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                            type: object
+                                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                        required: [port]
+                                                        type: object
+                                                      UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                                          ', maxProperties: 0, type: object}
+                                                      WebSocket:
+                                                        description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                                          '
+                                                        properties:
+                                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                        required: [port]
+                                                        type: object
+                                                    type: object
+                                                required: [transport]
+                                                type: object
+                                              L7mpController: {description: 'A virtual cluster that accepts L7mp controller REST API calls.
+
+                                                  ', maxProperties: 0, type: object}
+                                              Logger:
+                                                description: 'A virtual cluster that logs everything that passes through it to a log file.
+
+                                                  '
+                                                properties:
+                                                  log_file: {description: 'The file to log to. Opened it mode "w" (create or truncate if exists). Default is ''-'' (stdout).
+
+                                                      ', type: string}
+                                                  log_prefix: {description: Prefix log messages. Default is no prefix., type: string}
+                                                type: object
+                                              Sdtio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                                  ', maxProperties: 0, type: object}
+                                              Sync:
+                                                description: 'A virtual cluster that allows multiple streams to synchronize and exchange data. The Sync cluster acts as a rendezvous point for streams whose metadata query evaluates to the same value (like e.g., multiple WebSocket streams with the same HTTP cookie); these streams will be connected into a single broadcast domain, whereby any data sent by any of the streams will be boradcast to all the other streams. Useful for connecting two ingress streams into a single end-to-end stream.
+
+                                                  '
+                                                properties:
+                                                  query: {description: 'A JSONPredicate query to the stream metadata. All streams for which the query evaluates to the same value will be connected into a single broadcast domain.
+
+                                                      ', type: string}
+                                                required: [query]
+                                                type: object
+                                              TCP:
+                                                description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                                  '
+                                                properties:
+                                                  bind:
+                                                    description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                      '
+                                                    properties:
+                                                      address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                    type: object
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                required: [port]
+                                                type: object
+                                              UDP:
+                                                description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                                  '
+                                                properties:
+                                                  bind:
+                                                    description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                      '
+                                                    properties:
+                                                      address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                    type: object
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                required: [port]
+                                                type: object
+                                              UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                                  ', maxProperties: 0, type: object}
+                                              WebSocket:
+                                                description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                                  '
+                                                properties:
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                required: [port]
+                                                type: object
+                                            type: object
+                                        type: object
+                                      clusterRef: {type: string}
+                                    type: object
+                                  type: array
+                                name: {description: 'Name (optional, a unique name name will be assigned automatically if not specified.)
+
+                                    ', type: string}
+                                retry:
+                                  description: Connection retry/timeout policy.
+                                  properties:
+                                    num_retries: {description: 'If "retry_on" is "never" then this is meaningless.  If "retry_on" is "connect-failure" or "disconnect" then "num_retries" means the number of times to attempt a reconnect each cluster separately, so if there are two clusters in the route and "num_retries" is 3, then retry connecting both clusters 3 times. If a stream is reconnected after a disconnect event, try again this many times from zero.
+
+                                        ', type: integer}
+                                    retry_on:
+                                      description: 'One of "never" (never retry, default), "connect-failure" (retry only on a failure in the connection setup phase), "disconnect" (retry only when an already connected stream disconnects), or "always" ("connect-failure" & "disconnect").
+
+                                        '
+                                      enum: [never, connect-failure, disconnect, always]
+                                      type: string
+                                    timeout: {description: 'On "connect-failure", wait "timeout" msecs and then reconnect, otherwise wait "timeout" msecs between each re-connect attempts.
+
+                                        ', type: integer}
+                                  required: [retry_on]
+                                  type: object
+                              type: object
+                            routeRef: {description: A named Route, type: string}
+                          type: object
+                        match: {description: 'A complex filter specified as a JSON predicate, see https://tools.ietf.org/html/draft-snell-json-test-07
+
+                            ', type: object, x-kubernetes-preserve-unknown-fields: true}
+                        name: {description: Name (optional)., type: string}
+                      required: [action]
+                      type: object
+                    type: array
+                  rulesRef: {description: The name of a match-action table., type: string}
+                  spec:
+                    description: Listener specification (required).
+                    maxProperties: 1
+                    minProperties: 1
+                    properties:
+                      HTTP:
+                        description: A HTTP server specification that accepts HTTP requests at a specified port.
+                        properties:
+                          path: {description: HTTP URL to serve., type: string}
+                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                        required: [port]
+                        type: object
+                      JSONSocket:
+                        description: 'This listener implements the server side of the the JSONSocket datagram streaming protocol. JSONSocket implements the "HTTP header" semantics, but on top of a dumb unreliable datagram transport like UDP or pure IP. Can be established over any datagram transport, the listener expects the first packet of the stream to be a fully specified JSON object, which will then be copied into the session metadata, and can return an arbitrary response header to the client. Both the JSON request and response headers are transmitted reliably, subject to user specified timeout.
+
+                          '
+                        properties:
+                          transport:
+                            description: 'The specification of the listener that provides the transport service to JSONSocket.
+
+                              '
+                            maxProperties: 1
+                            minProperties: 1
+                            properties:
+                              TCP:
+                                description: 'A TCP server specification that accepts TCP requests at a specified
+
+                                  port.
+
+                                  '
+                                properties:
+                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                required: [port]
+                                type: object
+                              UDP:
+                                description: 'A UDP listener that accepts UDP connections in the specified port. The listener may work in one of 2 possible modes. In Singleton mode, the listener also expects a fully qualified remote address-port pair (both connect.address or connect.port specified), connects back to the remote and stops accepting further connection requests. In Server mode, the listener emits a new session for each UDP packet that belongs to a yet unseen connection (unknown IP 4-tuple). If a remote address or port is specified (one of connect.address or connect.port is specified), accept connections only from that remote address or port. Default is Singleton if both connect.address and connect.port are specified, otherwise Server (override with options.mode).
+
+                                  '
+                                properties:
+                                  connect:
+                                    description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                      '
+                                    properties:
+                                      address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                    type: object
+                                  options:
+                                    properties:
+                                      mode:
+                                        description: 'Work in singleton mode (only a single session is handled by the listener to a known remote) or server mode (a new session is emitted for each new peer address/port pair).
+
+                                          '
+                                        enum: [server, singleton]
+                                        type: string
+                                    type: object
+                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                required: [port]
+                                type: object
+                              UnixDomainSocket:
+                                description: 'A Unix Domain Socket (UDS) server specification that accepts IPC connection requests at a specified filename.
+
+                                  '
+                                properties:
+                                  filename: {description: File system path to bind to., type: string}
+                                required: [filename]
+                                type: object
+                              WebSocket:
+                                description: 'A WebSocket server specification that accepts HTTP/WebSocket requests at a specified port.
+
+                                  '
+                                properties:
+                                  path: {description: HTTP URL to serve., type: string}
+                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                required: [port]
+                                type: object
+                            type: object
+                        required: [transport]
+                        type: object
+                      TCP:
+                        description: 'A TCP server specification that accepts TCP requests at a specified
+
+                          port.
+
+                          '
+                        properties:
+                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                        required: [port]
+                        type: object
+                      UDP:
+                        description: 'A UDP listener that accepts UDP connections in the specified port. The listener may work in one of 2 possible modes. In Singleton mode, the listener also expects a fully qualified remote address-port pair (both connect.address or connect.port specified), connects back to the remote and stops accepting further connection requests. In Server mode, the listener emits a new session for each UDP packet that belongs to a yet unseen connection (unknown IP 4-tuple). If a remote address or port is specified (one of connect.address or connect.port is specified), accept connections only from that remote address or port. Default is Singleton if both connect.address and connect.port are specified, otherwise Server (override with options.mode).
+
+                          '
+                        properties:
+                          connect:
+                            description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                              '
+                            properties:
+                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                            type: object
+                          options:
+                            properties:
+                              mode:
+                                description: 'Work in singleton mode (only a single session is handled by the listener to a known remote) or server mode (a new session is emitted for each new peer address/port pair).
+
+                                  '
+                                enum: [server, singleton]
+                                type: string
+                            type: object
+                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                        required: [port]
+                        type: object
+                      UnixDomainSocket:
+                        description: 'A Unix Domain Socket (UDS) server specification that accepts IPC connection requests at a specified filename.
+
+                          '
+                        properties:
+                          filename: {description: File system path to bind to., type: string}
+                        required: [filename]
+                        type: object
+                      WebSocket:
+                        description: 'A WebSocket server specification that accepts HTTP/WebSocket requests at a specified port.
+
+                          '
+                        properties:
+                          path: {description: HTTP URL to serve., type: string}
+                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                        required: [port]
+                        type: object
+                    type: object
+                type: object
+              selector:
+                properties:
+                  matchExpressions:
+                    description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                      '
+                    properties:
+                      key: {description: key is the label key that the selector applies to., type: string}
+                      operator:
+                        description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                          '
+                        enum: [In, NotIn, Exists, DoesNotexist]
+                        type: string
+                      values:
+                        description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                          '
+                        items: {type: string}
+                        type: array
+                    type: object
+                  matchFields:
+                    description: 'A list of node selector requirements by node''s fields.
+
+                      '
+                    properties:
+                      key: {description: 'The label key that the selector applies to
+
+                          ', type: string}
+                      operator:
+                        description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                          '
+                        enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                        type: string
+                      values:
+                        description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                          '
+                        items: {type: string}
+                        type: array
+                    type: object
+                  matchLabels:
+                    additionalProperties: {type: string}
+                    description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                      '
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  matchNamespace: {description: matches pods with the given namespace, type: string}
+                  matchService: {description: matches pods belonging to the given service, type: string}
+                type: object
+              updateOwners: {default: false, type: boolean}
+            required: [selector, listener]
+            type: object
+          status: {type: object, x-kubernetes-preserve-unknown-fields: true}
+        type: object
+    served: true
+    storage: true
+---
+
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata: {name: targets.l7mp.io}
+spec:
+  group: l7mp.io
+  names:
+    kind: Target
+    plural: targets
+    shortNames: [tr]
+    singular: target
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - {description: Selector, jsonPath: .spec.selector, name: Selector, priority: 0, type: string}
+    - {description: As returned from the handler (sometimes)., jsonPath: .status.create_fn.message, name: Message, priority: 0, type: string}
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              cluster:
+                description: 'A socket that originates connections to external services, an abstraction for an "egress port".
+
+                  '
+                oneOf:
+                - not:
+                    required: [endpoints]
+                  required: [spec, endpointNum]
+                - not:
+                    required: [endpointNum]
+                  required: [spec, endpoints]
+                - allOf:
+                  - not:
+                      required: [endpointNum]
+                  - not:
+                      required: [endpoints]
+                  required: [spec]
+                properties:
+                  endpointNum: {description: 'The number of endpoints.  (Sometimes used in return values.)
+
+                      ', type: integer}
+                  endpoints:
+                    description: A list of EndPoints.
+                    items:
+                      anyOf:
+                      - required: [spec]
+                      - required: [selector]
+                      description: 'A particular upstream backend that accepts connects through a Cluster.
+
+                        '
+                      properties:
+                        name: {description: 'Name (optional, a unique endpoint name will be assigned automatically if not specified.)
+
+                            ', type: string}
+                        selector:
+                          properties:
+                            matchExpressions:
+                              description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                                '
+                              properties:
+                                key: {description: key is the label key that the selector applies to., type: string}
+                                operator:
+                                  description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                                    '
+                                  enum: [In, NotIn, Exists, DoesNotexist]
+                                  type: string
+                                values:
+                                  description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                                    '
+                                  items: {type: string}
+                                  type: array
+                              type: object
+                            matchFields:
+                              description: 'A list of node selector requirements by node''s fields.
+
+                                '
+                              properties:
+                                key: {description: 'The label key that the selector applies to
+
+                                    ', type: string}
+                                operator:
+                                  description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                                    '
+                                  enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                                  type: string
+                                values:
+                                  description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                                    '
+                                  items: {type: string}
+                                  type: array
+                              type: object
+                            matchLabels:
+                              additionalProperties: {type: string}
+                              description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                                '
+                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
+                            matchNamespace: {description: matches pods with the given namespace, type: string}
+                            matchService: {description: matches pods belonging to the given service, type: string}
+                          type: object
+                        spec:
+                          description: A generic endpoint specification.
+                          oneOf:
+                          - not:
+                              required: [address]
+                            required: [filename]
+                          - not:
+                              required: [filename]
+                            required: [address]
+                          properties:
+                            address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                            filename: {description: Unix Domain Socket filename, type: string}
+                            weight: {description: Weight of the endpoint used in load-balancing., type: integer}
+                          type: object
+                      type: object
+                    type: array
+                  loadbalancer:
+                    description: Load-balancer specification.
+                    properties:
+                      key: {description: 'The JSON path to the metadata field to hash on (optional).
+
+                          ', type: string}
+                      policy: {description: 'Load-balancing policy. The "Trivial" load-balancer always chooses the first endpoint. The "ConsistentHash" (alias for "HashRing") chooses an endpoint based on hashing the "LoadBalancer.key" field (or randomly if no key is specified). It provides soft session affinity (map sessions to the same endpoint with high probability even when adding/removing endpoints) and takes endpoint weights into account (so "HashRing" with no key specified will implement a somewhat expensive form of weighted random load-balancing).
+
+                          ', type: string}
+                    required: [policy]
+                    type: object
+                  name: {type: string}
+                  options: {description: Optional features., type: object}
+                  spec:
+                    maxProperties: 1
+                    minProperties: 1
+                    properties:
+                      Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                      Echo: {description: A virtual cluster that echoes back everything it receives., maxProperties: 0, type: object}
+                      JSONDecap: {description: 'A virtual cluster to decapsulates data from JSON. In particular, content from under "/payload" JSON path is decapsulated and returned and everything else is dropped.
+
+                          ', maxProperties: 0, type: object}
+                      JSONEncap: {description: 'A virtual cluster to encapsulate data in JSON. Session metadata is copied under the "/metadata" JSON path and content is copied under "/payload".
+
+                          ', maxProperties: 0, type: object}
+                      JSONSocket:
+                        description: 'A JSONSocket cluster specification that forwards JSONSocket connections to an upstream cluster over a specified transport.
+
+                          '
+                        properties:
+                          header:
+                            items:
+                              properties:
+                                path:
+                                  description: 'Deepcopy the session metadata into the JSONSocket header under the specified path.
+
+                                    '
+                                  properties:
+                                    from: {description: 'JSONPointer to the key to be deepcopied from the metadata into the JSONSocket header.
+
+                                        ', type: string}
+                                    to: {description: 'Target path as a JSONPointer where the specified values are copied to.
+
+                                        ', type: string}
+                                  required: [from, to]
+                                  type: object
+                                set:
+                                  description: "Set a key in the JSONSocket header to the specified constant value. \n"
+                                  properties:
+                                    key: {description: JSONPointer to the key in the JSONSocket header., type: string}
+                                    value: {description: Value to be set for the specified key., type: string}
+                                  required: [key, value]
+                                  type: object
+                              type: object
+                            type: array
+                          transport:
+                            description: 'The specification of the cluster that provides the transport service to JSONSocket.
+
+                              '
+                            maxProperties: 1
+                            minProperties: 1
+                            properties:
+                              Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                              Stdio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                  ', maxProperties: 0, type: object}
+                              TCP:
+                                description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                  '
+                                properties:
+                                  bind:
+                                    description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                      '
+                                    properties:
+                                      address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                    type: object
+                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                required: [port]
+                                type: object
+                              UDP:
+                                description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                  '
+                                properties:
+                                  bind:
+                                    description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                      '
+                                    properties:
+                                      address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                    type: object
+                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                required: [port]
+                                type: object
+                              UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                  ', maxProperties: 0, type: object}
+                              WebSocket:
+                                description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                  '
+                                properties:
+                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                required: [port]
+                                type: object
+                            type: object
+                        required: [transport]
+                        type: object
+                      L7mpController: {description: 'A virtual cluster that accepts L7mp controller REST API calls.
+
+                          ', maxProperties: 0, type: object}
+                      Logger:
+                        description: 'A virtual cluster that logs everything that passes through it to a log file.
+
+                          '
+                        properties:
+                          log_file: {description: 'The file to log to. Opened it mode "w" (create or truncate if exists). Default is ''-'' (stdout).
+
+                              ', type: string}
+                          log_prefix: {description: Prefix log messages. Default is no prefix., type: string}
+                        type: object
+                      Sdtio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                          ', maxProperties: 0, type: object}
+                      Sync:
+                        description: 'A virtual cluster that allows multiple streams to synchronize and exchange data. The Sync cluster acts as a rendezvous point for streams whose metadata query evaluates to the same value (like e.g., multiple WebSocket streams with the same HTTP cookie); these streams will be connected into a single broadcast domain, whereby any data sent by any of the streams will be boradcast to all the other streams. Useful for connecting two ingress streams into a single end-to-end stream.
+
+                          '
+                        properties:
+                          query: {description: 'A JSONPredicate query to the stream metadata. All streams for which the query evaluates to the same value will be connected into a single broadcast domain.
+
+                              ', type: string}
+                        required: [query]
+                        type: object
+                      TCP:
+                        description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                          '
+                        properties:
+                          bind:
+                            description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                              '
+                            properties:
+                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                            type: object
+                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                        required: [port]
+                        type: object
+                      UDP:
+                        description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                          '
+                        properties:
+                          bind:
+                            description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                              '
+                            properties:
+                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                            type: object
+                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                        required: [port]
+                        type: object
+                      UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                          ', maxProperties: 0, type: object}
+                      WebSocket:
+                        description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                          '
+                        properties:
+                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                        required: [port]
+                        type: object
+                    type: object
+                type: object
+              selector:
+                properties:
+                  matchExpressions:
+                    description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                      '
+                    properties:
+                      key: {description: key is the label key that the selector applies to., type: string}
+                      operator:
+                        description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                          '
+                        enum: [In, NotIn, Exists, DoesNotexist]
+                        type: string
+                      values:
+                        description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                          '
+                        items: {type: string}
+                        type: array
+                    type: object
+                  matchFields:
+                    description: 'A list of node selector requirements by node''s fields.
+
+                      '
+                    properties:
+                      key: {description: 'The label key that the selector applies to
+
+                          ', type: string}
+                      operator:
+                        description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                          '
+                        enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                        type: string
+                      values:
+                        description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                          '
+                        items: {type: string}
+                        type: array
+                    type: object
+                  matchLabels:
+                    additionalProperties: {type: string}
+                    description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                      '
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  matchNamespace: {description: matches pods with the given namespace, type: string}
+                  matchService: {description: matches pods belonging to the given service, type: string}
+                type: object
+            type: object
+          status: {type: object, x-kubernetes-preserve-unknown-fields: true}
+        type: object
+    served: true
+    storage: true
+---
+
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata: {name: rules.l7mp.io}
+spec:
+  group: l7mp.io
+  names: {kind: Rule, plural: rules, singular: rule}
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - {description: Selector, jsonPath: .spec.selector, name: Selector, priority: 0, type: string}
+    - {description: As returned from the handler (sometimes)., jsonPath: .status.create_fn.message, name: Message, priority: 0, type: string}
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              position: {type: integer}
+              rule:
+                description: 'A math-action rule that defines the route of a connection through the L7mp pipeline. May contain a match and an action. If no match is specified, a wildcard match is automatically installed.
+
+                  '
+                properties:
+                  action:
+                    description: 'The "action" part of a math-action rule that assigns a route to the matched sessions.
+
+                      '
+                    oneOf:
+                    - not:
+                        required: [route]
+                      required: [routeRef]
+                    - not:
+                        required: [routeRef]
+                      required: [route]
+                    - allOf:
+                      - not:
+                          required: [route]
+                      - not:
+                          required: [routeRef]
+                    properties:
+                      apply: {description: A named RuleList to defer match-action processing to., type: string}
+                      rewrite:
+                        description: A list of rewrite rules.
+                        items:
+                          description: 'Metadata rewrite rule. Find or create metadata at the specified path and set it to the specified value.
+
+                            '
+                          oneOf:
+                          - not:
+                              required: [valueStr]
+                            required: [path, value]
+                          - not:
+                              required: [value]
+                            required: [path, valueStr]
+                          properties:
+                            path: {description: 'The JSON path (as a JSON Pointer) to the metadata field to rewrite. Will be created if path does not exist.
+
+                                ', type: string}
+                            value: {description: 'The value to rewrite the metadata field at the specified path.
+
+                                ', type: object, x-kubernetes-preserve-unknown-fields: true}
+                            valueStr: {description: 'JSON encoded value to rewrite the metadata field at the specified path.
+
+                                ', type: string}
+                          type: object
+                        type: array
+                      route:
+                        description: The route to be assigned to a session in a math-action rule.
+                        oneOf:
+                        - not:
+                            required: [destination]
+                          required: [destinationRef]
+                        - not:
+                            required: [destinationRef]
+                          required: [destination]
+                        properties:
+                          destination:
+                            description: 'A socket that originates connections to external services, an abstraction for an "egress port".
+
+                              '
+                            oneOf:
+                            - not:
+                                required: [endpoints]
+                              required: [spec, endpointNum]
+                            - not:
+                                required: [endpointNum]
+                              required: [spec, endpoints]
+                            - allOf:
+                              - not:
+                                  required: [endpointNum]
+                              - not:
+                                  required: [endpoints]
+                              required: [spec]
+                            properties:
+                              endpointNum: {description: 'The number of endpoints.  (Sometimes used in return values.)
+
+                                  ', type: integer}
+                              endpoints:
+                                description: A list of EndPoints.
+                                items:
+                                  anyOf:
+                                  - required: [spec]
+                                  - required: [selector]
+                                  description: 'A particular upstream backend that accepts connects through a Cluster.
+
+                                    '
+                                  properties:
+                                    name: {description: 'Name (optional, a unique endpoint name will be assigned automatically if not specified.)
+
+                                        ', type: string}
+                                    selector:
+                                      properties:
+                                        matchExpressions:
+                                          description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                                            '
+                                          properties:
+                                            key: {description: key is the label key that the selector applies to., type: string}
+                                            operator:
+                                              description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                                                '
+                                              enum: [In, NotIn, Exists, DoesNotexist]
+                                              type: string
+                                            values:
+                                              description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                                                '
+                                              items: {type: string}
+                                              type: array
+                                          type: object
+                                        matchFields:
+                                          description: 'A list of node selector requirements by node''s fields.
+
+                                            '
+                                          properties:
+                                            key: {description: 'The label key that the selector applies to
+
+                                                ', type: string}
+                                            operator:
+                                              description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                                                '
+                                              enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                                              type: string
+                                            values:
+                                              description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                                                '
+                                              items: {type: string}
+                                              type: array
+                                          type: object
+                                        matchLabels:
+                                          additionalProperties: {type: string}
+                                          description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                                            '
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        matchNamespace: {description: matches pods with the given namespace, type: string}
+                                        matchService: {description: matches pods belonging to the given service, type: string}
+                                      type: object
+                                    spec:
+                                      description: A generic endpoint specification.
+                                      oneOf:
+                                      - not:
+                                          required: [address]
+                                        required: [filename]
+                                      - not:
+                                          required: [filename]
+                                        required: [address]
+                                      properties:
+                                        address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                        filename: {description: Unix Domain Socket filename, type: string}
+                                        weight: {description: Weight of the endpoint used in load-balancing., type: integer}
+                                      type: object
+                                  type: object
+                                type: array
+                              loadbalancer:
+                                description: Load-balancer specification.
+                                properties:
+                                  key: {description: 'The JSON path to the metadata field to hash on (optional).
+
+                                      ', type: string}
+                                  policy: {description: 'Load-balancing policy. The "Trivial" load-balancer always chooses the first endpoint. The "ConsistentHash" (alias for "HashRing") chooses an endpoint based on hashing the "LoadBalancer.key" field (or randomly if no key is specified). It provides soft session affinity (map sessions to the same endpoint with high probability even when adding/removing endpoints) and takes endpoint weights into account (so "HashRing" with no key specified will implement a somewhat expensive form of weighted random load-balancing).
+
+                                      ', type: string}
+                                required: [policy]
+                                type: object
+                              name: {type: string}
+                              options: {description: Optional features., type: object}
+                              spec:
+                                maxProperties: 1
+                                minProperties: 1
+                                properties:
+                                  Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                  Echo: {description: A virtual cluster that echoes back everything it receives., maxProperties: 0, type: object}
+                                  JSONDecap: {description: 'A virtual cluster to decapsulates data from JSON. In particular, content from under "/payload" JSON path is decapsulated and returned and everything else is dropped.
+
+                                      ', maxProperties: 0, type: object}
+                                  JSONEncap: {description: 'A virtual cluster to encapsulate data in JSON. Session metadata is copied under the "/metadata" JSON path and content is copied under "/payload".
+
+                                      ', maxProperties: 0, type: object}
+                                  JSONSocket:
+                                    description: 'A JSONSocket cluster specification that forwards JSONSocket connections to an upstream cluster over a specified transport.
+
+                                      '
+                                    properties:
+                                      header:
+                                        items:
+                                          properties:
+                                            path:
+                                              description: 'Deepcopy the session metadata into the JSONSocket header under the specified path.
+
+                                                '
+                                              properties:
+                                                from: {description: 'JSONPointer to the key to be deepcopied from the metadata into the JSONSocket header.
+
+                                                    ', type: string}
+                                                to: {description: 'Target path as a JSONPointer where the specified values are copied to.
+
+                                                    ', type: string}
+                                              required: [from, to]
+                                              type: object
+                                            set:
+                                              description: "Set a key in the JSONSocket header to the specified constant value. \n"
+                                              properties:
+                                                key: {description: JSONPointer to the key in the JSONSocket header., type: string}
+                                                value: {description: Value to be set for the specified key., type: string}
+                                              required: [key, value]
+                                              type: object
+                                          type: object
+                                        type: array
+                                      transport:
+                                        description: 'The specification of the cluster that provides the transport service to JSONSocket.
+
+                                          '
+                                        maxProperties: 1
+                                        minProperties: 1
+                                        properties:
+                                          Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                          Stdio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                              ', maxProperties: 0, type: object}
+                                          TCP:
+                                            description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                              '
+                                            properties:
+                                              bind:
+                                                description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                  '
+                                                properties:
+                                                  address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                type: object
+                                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                            required: [port]
+                                            type: object
+                                          UDP:
+                                            description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                              '
+                                            properties:
+                                              bind:
+                                                description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                  '
+                                                properties:
+                                                  address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                  port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                type: object
+                                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                            required: [port]
+                                            type: object
+                                          UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                              ', maxProperties: 0, type: object}
+                                          WebSocket:
+                                            description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                              '
+                                            properties:
+                                              port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                            required: [port]
+                                            type: object
+                                        type: object
+                                    required: [transport]
+                                    type: object
+                                  L7mpController: {description: 'A virtual cluster that accepts L7mp controller REST API calls.
+
+                                      ', maxProperties: 0, type: object}
+                                  Logger:
+                                    description: 'A virtual cluster that logs everything that passes through it to a log file.
+
+                                      '
+                                    properties:
+                                      log_file: {description: 'The file to log to. Opened it mode "w" (create or truncate if exists). Default is ''-'' (stdout).
+
+                                          ', type: string}
+                                      log_prefix: {description: Prefix log messages. Default is no prefix., type: string}
+                                    type: object
+                                  Sdtio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                      ', maxProperties: 0, type: object}
+                                  Sync:
+                                    description: 'A virtual cluster that allows multiple streams to synchronize and exchange data. The Sync cluster acts as a rendezvous point for streams whose metadata query evaluates to the same value (like e.g., multiple WebSocket streams with the same HTTP cookie); these streams will be connected into a single broadcast domain, whereby any data sent by any of the streams will be boradcast to all the other streams. Useful for connecting two ingress streams into a single end-to-end stream.
+
+                                      '
+                                    properties:
+                                      query: {description: 'A JSONPredicate query to the stream metadata. All streams for which the query evaluates to the same value will be connected into a single broadcast domain.
+
+                                          ', type: string}
+                                    required: [query]
+                                    type: object
+                                  TCP:
+                                    description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                      '
+                                    properties:
+                                      bind:
+                                        description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                          '
+                                        properties:
+                                          address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                        type: object
+                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                    required: [port]
+                                    type: object
+                                  UDP:
+                                    description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                      '
+                                    properties:
+                                      bind:
+                                        description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                          '
+                                        properties:
+                                          address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                          port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                        type: object
+                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                    required: [port]
+                                    type: object
+                                  UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                      ', maxProperties: 0, type: object}
+                                  WebSocket:
+                                    description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                      '
+                                    properties:
+                                      port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                    required: [port]
+                                    type: object
+                                type: object
+                            type: object
+                          destinationRef: {description: 'The target cluster of the route. It is the name of an existing cluster.
+
+                              ', type: string}
+                          egress:
+                            description: 'The set of transforms to be applied in the "eress" (downstream, from the cluster to the listener) direction (optional).
+
+                              '
+                            items:
+                              description: 'A downlink transformer cluster. Can be a string in which case it is the name of an existing cluster with the name given, or it can be an inline cluster definition in which case a new cluster will be added.
+
+                                '
+                              oneOf:
+                              - not:
+                                  required: [cluster]
+                                required: [clusterRef]
+                              - not:
+                                  required: [clusterRef]
+                                required: [cluster]
+                              properties:
+                                cluster:
+                                  description: 'A socket that originates connections to external services, an abstraction for an "egress port".
+
+                                    '
+                                  oneOf:
+                                  - not:
+                                      required: [endpoints]
+                                    required: [spec, endpointNum]
+                                  - not:
+                                      required: [endpointNum]
+                                    required: [spec, endpoints]
+                                  - allOf:
+                                    - not:
+                                        required: [endpointNum]
+                                    - not:
+                                        required: [endpoints]
+                                    required: [spec]
+                                  properties:
+                                    endpointNum: {description: 'The number of endpoints.  (Sometimes used in return values.)
+
+                                        ', type: integer}
+                                    endpoints:
+                                      description: A list of EndPoints.
+                                      items:
+                                        anyOf:
+                                        - required: [spec]
+                                        - required: [selector]
+                                        description: 'A particular upstream backend that accepts connects through a Cluster.
+
+                                          '
+                                        properties:
+                                          name: {description: 'Name (optional, a unique endpoint name will be assigned automatically if not specified.)
+
+                                              ', type: string}
+                                          selector:
+                                            properties:
+                                              matchExpressions:
+                                                description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                                                  '
+                                                properties:
+                                                  key: {description: key is the label key that the selector applies to., type: string}
+                                                  operator:
+                                                    description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                                                      '
+                                                    enum: [In, NotIn, Exists, DoesNotexist]
+                                                    type: string
+                                                  values:
+                                                    description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                                                      '
+                                                    items: {type: string}
+                                                    type: array
+                                                type: object
+                                              matchFields:
+                                                description: 'A list of node selector requirements by node''s fields.
+
+                                                  '
+                                                properties:
+                                                  key: {description: 'The label key that the selector applies to
+
+                                                      ', type: string}
+                                                  operator:
+                                                    description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                                                      '
+                                                    enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                                                    type: string
+                                                  values:
+                                                    description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                                                      '
+                                                    items: {type: string}
+                                                    type: array
+                                                type: object
+                                              matchLabels:
+                                                additionalProperties: {type: string}
+                                                description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                                                  '
+                                                type: object
+                                                x-kubernetes-preserve-unknown-fields: true
+                                              matchNamespace: {description: matches pods with the given namespace, type: string}
+                                              matchService: {description: matches pods belonging to the given service, type: string}
+                                            type: object
+                                          spec:
+                                            description: A generic endpoint specification.
+                                            oneOf:
+                                            - not:
+                                                required: [address]
+                                              required: [filename]
+                                            - not:
+                                                required: [filename]
+                                              required: [address]
+                                            properties:
+                                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                              filename: {description: Unix Domain Socket filename, type: string}
+                                              weight: {description: Weight of the endpoint used in load-balancing., type: integer}
+                                            type: object
+                                        type: object
+                                      type: array
+                                    loadbalancer:
+                                      description: Load-balancer specification.
+                                      properties:
+                                        key: {description: 'The JSON path to the metadata field to hash on (optional).
+
+                                            ', type: string}
+                                        policy: {description: 'Load-balancing policy. The "Trivial" load-balancer always chooses the first endpoint. The "ConsistentHash" (alias for "HashRing") chooses an endpoint based on hashing the "LoadBalancer.key" field (or randomly if no key is specified). It provides soft session affinity (map sessions to the same endpoint with high probability even when adding/removing endpoints) and takes endpoint weights into account (so "HashRing" with no key specified will implement a somewhat expensive form of weighted random load-balancing).
+
+                                            ', type: string}
+                                      required: [policy]
+                                      type: object
+                                    name: {type: string}
+                                    options: {description: Optional features., type: object}
+                                    spec:
+                                      maxProperties: 1
+                                      minProperties: 1
+                                      properties:
+                                        Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                        Echo: {description: A virtual cluster that echoes back everything it receives., maxProperties: 0, type: object}
+                                        JSONDecap: {description: 'A virtual cluster to decapsulates data from JSON. In particular, content from under "/payload" JSON path is decapsulated and returned and everything else is dropped.
+
+                                            ', maxProperties: 0, type: object}
+                                        JSONEncap: {description: 'A virtual cluster to encapsulate data in JSON. Session metadata is copied under the "/metadata" JSON path and content is copied under "/payload".
+
+                                            ', maxProperties: 0, type: object}
+                                        JSONSocket:
+                                          description: 'A JSONSocket cluster specification that forwards JSONSocket connections to an upstream cluster over a specified transport.
+
+                                            '
+                                          properties:
+                                            header:
+                                              items:
+                                                properties:
+                                                  path:
+                                                    description: 'Deepcopy the session metadata into the JSONSocket header under the specified path.
+
+                                                      '
+                                                    properties:
+                                                      from: {description: 'JSONPointer to the key to be deepcopied from the metadata into the JSONSocket header.
+
+                                                          ', type: string}
+                                                      to: {description: 'Target path as a JSONPointer where the specified values are copied to.
+
+                                                          ', type: string}
+                                                    required: [from, to]
+                                                    type: object
+                                                  set:
+                                                    description: "Set a key in the JSONSocket header to the specified constant value. \n"
+                                                    properties:
+                                                      key: {description: JSONPointer to the key in the JSONSocket header., type: string}
+                                                      value: {description: Value to be set for the specified key., type: string}
+                                                    required: [key, value]
+                                                    type: object
+                                                type: object
+                                              type: array
+                                            transport:
+                                              description: 'The specification of the cluster that provides the transport service to JSONSocket.
+
+                                                '
+                                              maxProperties: 1
+                                              minProperties: 1
+                                              properties:
+                                                Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                                Stdio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                                    ', maxProperties: 0, type: object}
+                                                TCP:
+                                                  description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                                    '
+                                                  properties:
+                                                    bind:
+                                                      description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                        '
+                                                      properties:
+                                                        address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                        port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                      type: object
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                                UDP:
+                                                  description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                                    '
+                                                  properties:
+                                                    bind:
+                                                      description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                        '
+                                                      properties:
+                                                        address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                        port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                      type: object
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                                UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                                    ', maxProperties: 0, type: object}
+                                                WebSocket:
+                                                  description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                                    '
+                                                  properties:
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                              type: object
+                                          required: [transport]
+                                          type: object
+                                        L7mpController: {description: 'A virtual cluster that accepts L7mp controller REST API calls.
+
+                                            ', maxProperties: 0, type: object}
+                                        Logger:
+                                          description: 'A virtual cluster that logs everything that passes through it to a log file.
+
+                                            '
+                                          properties:
+                                            log_file: {description: 'The file to log to. Opened it mode "w" (create or truncate if exists). Default is ''-'' (stdout).
+
+                                                ', type: string}
+                                            log_prefix: {description: Prefix log messages. Default is no prefix., type: string}
+                                          type: object
+                                        Sdtio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                            ', maxProperties: 0, type: object}
+                                        Sync:
+                                          description: 'A virtual cluster that allows multiple streams to synchronize and exchange data. The Sync cluster acts as a rendezvous point for streams whose metadata query evaluates to the same value (like e.g., multiple WebSocket streams with the same HTTP cookie); these streams will be connected into a single broadcast domain, whereby any data sent by any of the streams will be boradcast to all the other streams. Useful for connecting two ingress streams into a single end-to-end stream.
+
+                                            '
+                                          properties:
+                                            query: {description: 'A JSONPredicate query to the stream metadata. All streams for which the query evaluates to the same value will be connected into a single broadcast domain.
+
+                                                ', type: string}
+                                          required: [query]
+                                          type: object
+                                        TCP:
+                                          description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                            '
+                                          properties:
+                                            bind:
+                                              description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                '
+                                              properties:
+                                                address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                              type: object
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                        UDP:
+                                          description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                            '
+                                          properties:
+                                            bind:
+                                              description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                '
+                                              properties:
+                                                address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                              type: object
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                        UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                            ', maxProperties: 0, type: object}
+                                        WebSocket:
+                                          description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                            '
+                                          properties:
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                      type: object
+                                  type: object
+                                clusterRef: {type: string}
+                              type: object
+                            type: array
+                          ingress:
+                            description: 'The set of transforms to be applied in the "ingress" (upstream, from the listener to the cluster) direction (optional).
+
+                              '
+                            items:
+                              description: 'An uplink transformer cluster. Can be a string in which case it is the name of an existing cluster with the name given, or it can be an inline cluster definition in which case a new cluster will be added.
+
+                                '
+                              oneOf:
+                              - not:
+                                  required: [cluster]
+                                required: [clusterRef]
+                              - not:
+                                  required: [clusterRef]
+                                required: [cluster]
+                              properties:
+                                cluster:
+                                  description: 'A socket that originates connections to external services, an abstraction for an "egress port".
+
+                                    '
+                                  oneOf:
+                                  - not:
+                                      required: [endpoints]
+                                    required: [spec, endpointNum]
+                                  - not:
+                                      required: [endpointNum]
+                                    required: [spec, endpoints]
+                                  - allOf:
+                                    - not:
+                                        required: [endpointNum]
+                                    - not:
+                                        required: [endpoints]
+                                    required: [spec]
+                                  properties:
+                                    endpointNum: {description: 'The number of endpoints.  (Sometimes used in return values.)
+
+                                        ', type: integer}
+                                    endpoints:
+                                      description: A list of EndPoints.
+                                      items:
+                                        anyOf:
+                                        - required: [spec]
+                                        - required: [selector]
+                                        description: 'A particular upstream backend that accepts connects through a Cluster.
+
+                                          '
+                                        properties:
+                                          name: {description: 'Name (optional, a unique endpoint name will be assigned automatically if not specified.)
+
+                                              ', type: string}
+                                          selector:
+                                            properties:
+                                              matchExpressions:
+                                                description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                                                  '
+                                                properties:
+                                                  key: {description: key is the label key that the selector applies to., type: string}
+                                                  operator:
+                                                    description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                                                      '
+                                                    enum: [In, NotIn, Exists, DoesNotexist]
+                                                    type: string
+                                                  values:
+                                                    description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                                                      '
+                                                    items: {type: string}
+                                                    type: array
+                                                type: object
+                                              matchFields:
+                                                description: 'A list of node selector requirements by node''s fields.
+
+                                                  '
+                                                properties:
+                                                  key: {description: 'The label key that the selector applies to
+
+                                                      ', type: string}
+                                                  operator:
+                                                    description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                                                      '
+                                                    enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                                                    type: string
+                                                  values:
+                                                    description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                                                      '
+                                                    items: {type: string}
+                                                    type: array
+                                                type: object
+                                              matchLabels:
+                                                additionalProperties: {type: string}
+                                                description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                                                  '
+                                                type: object
+                                                x-kubernetes-preserve-unknown-fields: true
+                                              matchNamespace: {description: matches pods with the given namespace, type: string}
+                                              matchService: {description: matches pods belonging to the given service, type: string}
+                                            type: object
+                                          spec:
+                                            description: A generic endpoint specification.
+                                            oneOf:
+                                            - not:
+                                                required: [address]
+                                              required: [filename]
+                                            - not:
+                                                required: [filename]
+                                              required: [address]
+                                            properties:
+                                              address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                              filename: {description: Unix Domain Socket filename, type: string}
+                                              weight: {description: Weight of the endpoint used in load-balancing., type: integer}
+                                            type: object
+                                        type: object
+                                      type: array
+                                    loadbalancer:
+                                      description: Load-balancer specification.
+                                      properties:
+                                        key: {description: 'The JSON path to the metadata field to hash on (optional).
+
+                                            ', type: string}
+                                        policy: {description: 'Load-balancing policy. The "Trivial" load-balancer always chooses the first endpoint. The "ConsistentHash" (alias for "HashRing") chooses an endpoint based on hashing the "LoadBalancer.key" field (or randomly if no key is specified). It provides soft session affinity (map sessions to the same endpoint with high probability even when adding/removing endpoints) and takes endpoint weights into account (so "HashRing" with no key specified will implement a somewhat expensive form of weighted random load-balancing).
+
+                                            ', type: string}
+                                      required: [policy]
+                                      type: object
+                                    name: {type: string}
+                                    options: {description: Optional features., type: object}
+                                    spec:
+                                      maxProperties: 1
+                                      minProperties: 1
+                                      properties:
+                                        Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                        Echo: {description: A virtual cluster that echoes back everything it receives., maxProperties: 0, type: object}
+                                        JSONDecap: {description: 'A virtual cluster to decapsulates data from JSON. In particular, content from under "/payload" JSON path is decapsulated and returned and everything else is dropped.
+
+                                            ', maxProperties: 0, type: object}
+                                        JSONEncap: {description: 'A virtual cluster to encapsulate data in JSON. Session metadata is copied under the "/metadata" JSON path and content is copied under "/payload".
+
+                                            ', maxProperties: 0, type: object}
+                                        JSONSocket:
+                                          description: 'A JSONSocket cluster specification that forwards JSONSocket connections to an upstream cluster over a specified transport.
+
+                                            '
+                                          properties:
+                                            header:
+                                              items:
+                                                properties:
+                                                  path:
+                                                    description: 'Deepcopy the session metadata into the JSONSocket header under the specified path.
+
+                                                      '
+                                                    properties:
+                                                      from: {description: 'JSONPointer to the key to be deepcopied from the metadata into the JSONSocket header.
+
+                                                          ', type: string}
+                                                      to: {description: 'Target path as a JSONPointer where the specified values are copied to.
+
+                                                          ', type: string}
+                                                    required: [from, to]
+                                                    type: object
+                                                  set:
+                                                    description: "Set a key in the JSONSocket header to the specified constant value. \n"
+                                                    properties:
+                                                      key: {description: JSONPointer to the key in the JSONSocket header., type: string}
+                                                      value: {description: Value to be set for the specified key., type: string}
+                                                    required: [key, value]
+                                                    type: object
+                                                type: object
+                                              type: array
+                                            transport:
+                                              description: 'The specification of the cluster that provides the transport service to JSONSocket.
+
+                                                '
+                                              maxProperties: 1
+                                              minProperties: 1
+                                              properties:
+                                                Discard: {description: A virtual cluster that discards everything it receives., maxProperties: 0, type: object}
+                                                Stdio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                                    ', maxProperties: 0, type: object}
+                                                TCP:
+                                                  description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                                    '
+                                                  properties:
+                                                    bind:
+                                                      description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                        '
+                                                      properties:
+                                                        address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                        port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                      type: object
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                                UDP:
+                                                  description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                                    '
+                                                  properties:
+                                                    bind:
+                                                      description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                        '
+                                                      properties:
+                                                        address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                        port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                      type: object
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                                UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                                    ', maxProperties: 0, type: object}
+                                                WebSocket:
+                                                  description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                                    '
+                                                  properties:
+                                                    port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                                  required: [port]
+                                                  type: object
+                                              type: object
+                                          required: [transport]
+                                          type: object
+                                        L7mpController: {description: 'A virtual cluster that accepts L7mp controller REST API calls.
+
+                                            ', maxProperties: 0, type: object}
+                                        Logger:
+                                          description: 'A virtual cluster that logs everything that passes through it to a log file.
+
+                                            '
+                                          properties:
+                                            log_file: {description: 'The file to log to. Opened it mode "w" (create or truncate if exists). Default is ''-'' (stdout).
+
+                                                ', type: string}
+                                            log_prefix: {description: Prefix log messages. Default is no prefix., type: string}
+                                          type: object
+                                        Sdtio: {description: 'A virtual cluster that writes the stream routed to it to the proxy standard output and pipes back standard input into the stream. Useful for debugging.
+
+                                            ', maxProperties: 0, type: object}
+                                        Sync:
+                                          description: 'A virtual cluster that allows multiple streams to synchronize and exchange data. The Sync cluster acts as a rendezvous point for streams whose metadata query evaluates to the same value (like e.g., multiple WebSocket streams with the same HTTP cookie); these streams will be connected into a single broadcast domain, whereby any data sent by any of the streams will be boradcast to all the other streams. Useful for connecting two ingress streams into a single end-to-end stream.
+
+                                            '
+                                          properties:
+                                            query: {description: 'A JSONPredicate query to the stream metadata. All streams for which the query evaluates to the same value will be connected into a single broadcast domain.
+
+                                                ', type: string}
+                                          required: [query]
+                                          type: object
+                                        TCP:
+                                          description: 'A TCP cluster specification that forwards TCP connections to an upstream cluster.
+
+                                            '
+                                          properties:
+                                            bind:
+                                              description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                '
+                                              properties:
+                                                address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                              type: object
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                        UDP:
+                                          description: 'A UDP sender socket that forwards UDP connections to an upstream cluster, connecting to a well-defined remote address-port pair.
+
+                                            '
+                                          properties:
+                                            bind:
+                                              description: 'A network layer (IP/IPv6) address/domain name and/or a transport layer port.
+
+                                                '
+                                              properties:
+                                                address: {description: A network layer (IP/IPv6) address or domain name., type: string}
+                                                port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                              type: object
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                        UnixDomainSocket: {description: 'A Unix Domain Socket (UDS) cluster specification that forwards IPC connections to an upstream cluster.
+
+                                            ', maxProperties: 0, type: object}
+                                        WebSocket:
+                                          description: 'A WebSocket cluster specification that forwards HTTP/WebSocket connections to an upstream cluster.
+
+                                            '
+                                          properties:
+                                            port: {description: The valid transport protocol port., maximum: 65535, minimum: 1, type: integer}
+                                          required: [port]
+                                          type: object
+                                      type: object
+                                  type: object
+                                clusterRef: {type: string}
+                              type: object
+                            type: array
+                          name: {description: 'Name (optional, a unique name name will be assigned automatically if not specified.)
+
+                              ', type: string}
+                          retry:
+                            description: Connection retry/timeout policy.
+                            properties:
+                              num_retries: {description: 'If "retry_on" is "never" then this is meaningless.  If "retry_on" is "connect-failure" or "disconnect" then "num_retries" means the number of times to attempt a reconnect each cluster separately, so if there are two clusters in the route and "num_retries" is 3, then retry connecting both clusters 3 times. If a stream is reconnected after a disconnect event, try again this many times from zero.
+
+                                  ', type: integer}
+                              retry_on:
+                                description: 'One of "never" (never retry, default), "connect-failure" (retry only on a failure in the connection setup phase), "disconnect" (retry only when an already connected stream disconnects), or "always" ("connect-failure" & "disconnect").
+
+                                  '
+                                enum: [never, connect-failure, disconnect, always]
+                                type: string
+                              timeout: {description: 'On "connect-failure", wait "timeout" msecs and then reconnect, otherwise wait "timeout" msecs between each re-connect attempts.
+
+                                  ', type: integer}
+                            required: [retry_on]
+                            type: object
+                        type: object
+                      routeRef: {description: A named Route, type: string}
+                    type: object
+                  match: {description: 'A complex filter specified as a JSON predicate, see https://tools.ietf.org/html/draft-snell-json-test-07
+
+                      ', type: object, x-kubernetes-preserve-unknown-fields: true}
+                  name: {description: Name (optional)., type: string}
+                required: [action]
+                type: object
+              rulelist: {type: string}
+              selector:
+                properties:
+                  matchExpressions:
+                    description: 'matchExpressions is a list of label selector requirements. The requirements are ANDed.
+
+                      '
+                    properties:
+                      key: {description: key is the label key that the selector applies to., type: string}
+                      operator:
+                        description: '"operator represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist."
+
+                          '
+                        enum: [In, NotIn, Exists, DoesNotexist]
+                        type: string
+                      values:
+                        description: 'values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+
+                          '
+                        items: {type: string}
+                        type: array
+                    type: object
+                  matchFields:
+                    description: 'A list of node selector requirements by node''s fields.
+
+                      '
+                    properties:
+                      key: {description: 'The label key that the selector applies to
+
+                          ', type: string}
+                      operator:
+                        description: 'Represents a key''s relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+                          '
+                        enum: [In, NotIn, Exists, DoesNotExist, Gt, Lt]
+                        type: string
+                      values:
+                        description: 'An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
+
+                          '
+                        items: {type: string}
+                        type: array
+                    type: object
+                  matchLabels:
+                    additionalProperties: {type: string}
+                    description: 'matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+                      '
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  matchNamespace: {description: matches pods with the given namespace, type: string}
+                  matchService: {description: matches pods belonging to the given service, type: string}
+                type: object
+              updateOwners: {default: false, type: boolean}
+            type: object
+          status: {type: object, x-kubernetes-preserve-unknown-fields: true}
+        type: object
+    served: true
+    storage: true

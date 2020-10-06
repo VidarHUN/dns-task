@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  op-l7mp:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2020-09-29T13:39:04.614585194Z"
+    description: Operator handling CRDs of the l7mp service mesh
+    digest: 589f1d58ecfba96419ea089c298d0cecd15f7ce09aedc14c632bbe3d7e5f5700
+    name: op-l7mp
+    type: application
+    urls:
+    - op-l7mp-0.1.0.tgz
+    version: 0.1.0
+generated: "2020-09-29T13:39:04.612640304Z"

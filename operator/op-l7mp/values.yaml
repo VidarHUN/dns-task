@@ -1,0 +1,23 @@
+# Default values for op-l7mp.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: master:5000/
+  pullPolicy: Always
+  name: l7mp/l7mp-operator
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: latest
+
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true  
+
+serviceAccount:
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+global:
+  extraRules: ""
