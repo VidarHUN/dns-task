@@ -107,14 +107,14 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: test-dns
+      app: dns
   template:
     metadata:
       labels:
-        app: test-dns
+        app: dns
     spec:
       containers:
-      - name: test-dns
+      - name: dns
         image: coredns/coredns
         args: ["-conf", "/root/Corefile"]
         volumeMounts:
@@ -178,20 +178,20 @@ data:
             port: 5000
         rules:
           - name: rule-0
+            match: { op: matches, path: /DNS/question/name, value: test* }
+            action:
+              route:
+                destination: test-dns
+                retry:
+                  retry_on: always
+                  num_retries: 3
+                  timeout: 2000
+          - name: rule-1
             match: { op: starts, path: /IP/src_addr, value: 172.17.0.1 }
             action:
               route:
                 destination: coredns
                 retry: 
-                  retry_on: always
-                  num_retries: 3
-                  timeout: 2000
-          - name: rule-1
-            match: { op: match, pat: /metadata/question/name, value: /*\test.example.com/ }
-            action:
-              route:
-                destination: test-dns
-                retry:
                   retry_on: always
                   num_retries: 3
                   timeout: 2000
@@ -216,3 +216,5 @@ data:
         endpoints: 
           - name: ep2
             spec: { address: test-dns-0.dns, port: 100 }
+          - name: ep3
+            spec: { address: test-dns-1.dns, port: 100 }
