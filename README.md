@@ -1,5 +1,7 @@
 # DNS server with l7mp
 
+A working canary deployment could find here: [canary](dns-l7mp/README.md)
+
 In this task you will be able to deploy a CoreDNS DNS server in a Kubernetes cluster and use resilience and request control through l7mp. 
 
 For the sake of simplicity the DNS server provides a simple `A` record, which is looks like this in the config:
