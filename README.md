@@ -21,6 +21,10 @@ The Domain Name System ([DNS](https://www.cloudflare.com/learning/dns/what-is-dn
 
 ## How to deploy
 
+The architecture what this deployment will produce: 
+
+![Diagram](./diagram.svg)
+
 1. Create the necessary files in Minikube or your environment like that way:
 
    1. You have to ssh into Minikube `minikube ssh`.
