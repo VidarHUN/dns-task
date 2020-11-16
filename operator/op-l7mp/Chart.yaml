@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 1.16.0
-description: Operator handling CRDs of the l7mp service mesh
-name: op-l7mp
-type: application
-version: 0.1.0
