@@ -1,0 +1,79 @@
+apiVersion: l7mp.io/v1
+kind: Target
+metadata:
+  name: dns-cluster
+spec: 
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+        # - dns
+        - l7mp-ingress
+  cluster:
+    spec:
+      UDP:
+        port: 5000
+    # loadbalancer:
+    #   policy: ConsistentHash
+    endpoints:
+      - selector:
+          matchLabels:
+            app: dns
+---
+# apiVersion: l7mp.io/v1
+# kind: Target
+# metadata:
+#   name: dns-ingress
+# spec:
+#   selector:
+#     matchLabels:
+#       app: l7mp-ingress
+#   linkedVirtualService: dns-cluster
+---
+apiVersion: l7mp.io/v1
+kind: VirtualService
+metadata:
+  name: dns-listener
+spec:
+  selector:
+    matchLabels:
+      app: dns
+  listener:
+    spec:
+      UDP:
+        port: 5000
+    rules:
+      - action:
+          route:
+            destination:
+              spec:
+                UDP:
+                  port: 100
+              endpoints:
+                - spec: { address: 127.0.0.1 }
+            retry:
+              retry_on: always
+              num_retries: 3
+              timeout: 2000
+---
+apiVersion: l7mp.io/v1
+kind: VirtualService
+metadata:
+  name: gateway
+spec:
+  selector:
+    matchLabels:
+      app: l7mp-ingress
+  listener:
+    spec:
+      UDP:
+        port: 5000
+    rules: 
+      - action:
+          route:
+            destinationRef: /apis/l7mp.io/v1/namespaces/default/targets/dns-cluster
+            retry:
+              retry_on: always
+              num_retries: 3
+              timeout: 2000

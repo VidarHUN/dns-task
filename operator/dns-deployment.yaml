@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-deployment
+  labels:
+    app: dns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dns
+  template:
+    metadata:
+      labels:
+        app: dns
+    spec:
+      containers:
+        - name: dns
+          image: coredns/coredns
+          args: ["-conf", "/root/Corefile"]
+          volumeMounts:
+            - name: dns-config
+              mountPath: "/root"
+          ports:
+            - containerPort: 100
+              protocol: UDP
+        - name: sidecar
+          image: l7mp/l7mp:latest
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["l7mp-proxy.js", "-c", "config/dns-sidecar.yaml", "-s", "-l", "info"]
+          ports:
+            - containerPort: 5000
+              protocol: UDP
+          volumeMounts:
+            - name: dns-sidecar
+              mountPath: /app/config
+      volumes:
+        - name: dns-config
+          configMap:
+            name: dns-config
+        - name: dns-sidecar
+          configMap:
+            name: dns-sidecar-config
+# ---
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: config-pv
+#   labels: 
+#     type: local
+# spec:
+#   storageClassName: manual
+#   capacity:
+#     storage: 10Gi
+#   accessModes:
+#     - ReadWriteOnce
+#   hostPath:
+#     path: "/mnt/data/config"
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: config-pvc
+# spec:
+#   storageClassName: manual
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 2Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-sidecar-config
+data:
+  dns-sidecar.yaml: |
+    admin:
+      log_level: info
+      log_file: stdout
+      access_log_path: /tmp/admin_access.log
+    listeners:
+      - name: controller-listener
+        spec: { protocol: HTTP, port: 1234 }
+        rules:
+          - action:
+              route:
+                destination:
+                  name: l7mp-controller
+                  spec: { protocol: L7mpController }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-config
+data:
+  Corefile: |
+    .:100 {
+      forward . 8.8.8.8 9.9.9.9
+      log
+      errors
+    }
+
+    example.com:100 {
+      file /root/example.db
+      log
+      errors
+    }
+  example.db: |
+    example.com.        IN  SOA dns.example.com. robbmanes.example.com. 2015082541 7200 3600 1209600 3600
+    gateway.example.com.    IN  A   192.168.1.1
+    dns.example.com.    IN  A   192.168.1.2
+    host.example.com.   IN  A   192.168.1.3
+    server.example.com. IN  CNAME   host.example.com
